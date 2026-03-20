@@ -84,34 +84,7 @@ foundryup
 forge --version
 ```
 
-### Setup
 
-```bash
-# Clone the correct base repo
-git clone --branch main --recurse-submodules https://github.com/Uniswap/v4-periphery.git
-cd v4-periphery
-
-# Copy LuxeBridge contracts into place
-cp LuxeBridgeHook.sol src/
-cp DiamondToken.sol src/
-cp MockLuxeOracle.sol src/
-cp LuxeBridgeHook.t.sol test/
-cp DeployLuxeBridge.s.sol script/
-
-# Create remappings
-cat > remappings.txt << 'EOF'
-v4-core/=lib/v4-core/
-v4-periphery/src/=src/
-@uniswap/v4-core/=lib/v4-core/
-forge-std/=lib/v4-core/lib/forge-std/src/
-@openzeppelin/contracts/=lib/v4-core/lib/openzeppelin-contracts/contracts/
-openzeppelin-contracts/=lib/v4-core/lib/openzeppelin-contracts/
-permit2/=lib/permit2/
-solmate/=lib/v4-core/lib/solmate/
-ds-test/=lib/v4-core/lib/forge-std/lib/ds-test/src/
-EOF
-
-forge build
 ```
 
 ### Run Tests
@@ -127,65 +100,8 @@ forge test --match-test test_Swap_Success -vvv
 forge test --gas-report
 ```
 
-### Deploy Locally (Anvil)
 
-```bash
-# Terminal 1 — start local node
-anvil
 
-# Terminal 2 — deploy
-export PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
-
-forge script script/DeployLuxeBridge.s.sol \
-  --rpc-url http://localhost:8545 \
-  --broadcast \
-  -vvvv
-```
-
----
-
-## Test Coverage
-
-| Test | What it covers |
-|---|---|
-| `test_PoolRegistered` | Pool correctly registered and active |
-| `test_AddLiquidity_Success` | Happy path liquidity addition |
-| `test_Swap_Success` | Happy path swap |
-| `test_Revert_TokenNotCertified_OnSwap` | Reverts when certification revoked |
-| `test_Revert_TokenNotCertified_OnAddLiquidity` | Reverts on uncertified liquidity add |
-| `test_Revert_StaleOracle_OnSwap` | Reverts when oracle price is stale |
-| `test_Revert_UnregisteredPool` | Reverts on unregistered pool |
-| `test_CircuitBreaker_TriggeredOnLargeDeviation` | Circuit breaker fires on large price gap |
-| `test_CircuitBreaker_Reset` | Owner can reset a halted pool |
-| `test_DiamondToken_Metadata` | Token decimals, certificate ID, carat weight |
-| `test_DiamondToken_MintBurn` | Mint and burn mechanics |
-
----
-
-## Interacting via Cast
-
-```bash
-# Check if a pool is active
-cast call <HOOK_ADDRESS> "isPoolActive((address,address,uint24,int24,address))" \
-  "(<C0>,<C1>,3000,60,<HOOK_ADDRESS>)" --rpc-url http://localhost:8545
-
-# Get current oracle price
-cast call <ORACLE_ADDRESS> "getPrice(address)" <DIAMOND_TOKEN> \
-  --rpc-url http://localhost:8545
-
-# Check certification
-cast call <ORACLE_ADDRESS> "isCertified(address)" <DIAMOND_TOKEN> \
-  --rpc-url http://localhost:8545
-
-# Reset circuit breaker (owner only)
-cast send <HOOK_ADDRESS> "resetCircuitBreaker((address,address,uint24,int24,address))" \
-  "(<C0>,<C1>,3000,60,<HOOK_ADDRESS>)" --private-key $PRIVATE_KEY \
-  --rpc-url http://localhost:8545
-
-# Update max deviation to 10%
-cast send <HOOK_ADDRESS> "setMaxDeviationBps(uint256)" 1000 \
-  --private-key $PRIVATE_KEY --rpc-url http://localhost:8545
-```
 
 ---
 
@@ -212,27 +128,3 @@ All other pool actions (remove liquidity, donate, etc.) pass through without int
 
 ---
 
-## Production Roadmap
-
-To deploy this with real value:
-
-- **Replace `MockLuxeOracle`** with a Chainlink Functions feed sourcing from [Rappaport price sheets](https://www.rappaport.com) or [IDEX](https://www.idexonline.com)
-- **Add KYC/AML gating** in `beforeSwap` against a verified wallet whitelist
-- **Gate `DiamondToken` minting** behind on-chain vault proof / proof-of-reserve
-- **Add a TimelockController** to admin functions (`setOracle`, `setMaxDeviationBps`)
-- **Full security audit** before any real-value deployment
-
----
-
-## Built With
-
-- [Uniswap V4](https://github.com/Uniswap/v4-core) — Hook infrastructure
-- [Foundry](https://github.com/foundry-rs/foundry) — Testing and deployment
-- [OpenZeppelin Contracts](https://github.com/OpenZeppelin/openzeppelin-contracts) — ERC-20, Ownable, ReentrancyGuard
-- [Unichain](https://unichain.org) — Target deployment chain
-
----
-
-## License
-
-MIT
